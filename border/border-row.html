@@ -1,0 +1,448 @@
+<html>
+<head>
+<title>Hsinchu Border Generator</title>
+<script>
+function process() {
+	var col = generator.col.value;
+	var code = generator.code.value;
+	generator.output.value = code.replace("%s", generateBorder(col));
+}
+
+var Coordinate = function(x, y) {
+	return {
+		x: x, 
+		y: y,
+		String: function() { return x+','+y; }
+	};
+};
+
+var Placemark = function() {
+	return {
+		name: '',
+		styleUrl: '',
+		coordinates: [], 
+		InsertCoordinate: function(x, y) {
+			this.coordinates.push(Coordinate(x, y));
+		},
+		GetXML: function() {
+			var xmlDoc = document.implementation.createDocument(null, "");
+			var newElement = xmlDoc.createElement("Placemark");
+			var name = xmlDoc.createElement("name");
+			name.appendChild(xmlDoc.createTextNode(this.name));
+			newElement.appendChild(name);
+			var styleUrl = xmlDoc.createElement("styleUrl");
+			styleUrl.appendChild(xmlDoc.createTextNode(this.styleUrl));
+			newElement.appendChild(styleUrl);
+			newElement.appendChild(CoordinatesToXML(this.coordinates));
+			return newElement;
+		},
+		String: function() {
+			return (new XMLSerializer()).serializeToString(this.GetXML());
+		}
+	};
+};
+
+var nw = Coordinate(120.94381, 24.85201);
+var ne = Coordinate(121.042557, 24.85201);
+var sw = Coordinate(120.94381, 24.761952);
+var se = Coordinate(121.042557, 24.761952);
+var diffX = (ne.x - nw.x) / 1000;
+var diffY = (ne.y - se.y) / 1000;
+
+function CoordinatesToXML(coordinates) {
+	var xmlDoc = document.implementation.createDocument(null, "");
+	var newElement = xmlDoc.createElement("LineString");
+	var tessellate = xmlDoc.createElement("tessellate");
+	tessellate.appendChild(xmlDoc.createTextNode(1));
+	newElement.appendChild(tessellate);
+	var coords = xmlDoc.createElement("coordinates");
+	var coordText = '';
+	Array.prototype.filter.call(coordinates, function(coord){
+		coordText = coordText + coord.String() + ',0\n';
+	});
+	coords.appendChild(xmlDoc.createTextNode(coordText));
+	newElement.appendChild(coords);
+	return newElement;
+};
+
+function generateBorder(col) {
+	return generateXBorder(col) + generateYBorder(col);
+}
+
+function pickColor(i) {
+	if (i % 100 == 0)
+		return '#line-000000-5000-nodesc';
+	else if (i % 50 == 0)
+		return '#line-000000-2000-nodesc';
+	else if (i % 10 == 0)
+		return '#line-000000-1000-red';
+	else if (i % 5 == 0 )
+		return '#line-000000-1000-green';
+		
+	return '#line-000000-1000-nodesc';
+}
+
+function generateYBorder(col) {
+	var width = col==10 ? 24 : 100;
+	var ret = '';
+	var top = nw.y - col*100*diffY;
+	var bottom = top - width*diffY;
+	for (i=0; i<=1024; ++i) {
+		var p = Placemark();
+		p.name = 'test';
+		p.styleUrl = pickColor(i);
+		var left = nw.x + i*diffX;
+		p.InsertCoordinate(left, top);
+		p.InsertCoordinate(left, bottom);
+		ret = ret + p.String();
+	}
+	return ret;
+}
+
+function generateXBorder(col) {
+	var n = col==10 ? 24 : 100;
+	var ret = '';
+	var left = nw.x;
+	var right = nw.x + 1024*diffX;
+	for (i=0; i<=n; ++i) {
+		var p = Placemark();
+		p.name = 'test';
+		p.styleUrl = pickColor(i);
+		var height = nw.y - (col*100 + i)*diffY;
+		p.InsertCoordinate(left, height);
+		p.InsertCoordinate(right, height);
+		ret = ret + p.String();
+	}
+	return ret;
+}
+</script>
+</head>
+<body>
+<form name="generator">
+<div>Column:
+<select name="col">
+<option value="0">0</option>
+<option value="1">1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<option value="5">5</option>
+<option value="6">6</option>
+<option value="7">7</option>
+<option value="8">8</option>
+<option value="9">9</option>
+<option value="10">A</option>
+</select>
+<input type="button" value="Generate" onClick="process()"/></div>
+<textarea name="code">
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>新竹鐵道計畫 (v1.0c)</name>
+    <description><![CDATA[A列車9 <br>新竹鐵道計畫 v1.0c]]></description>
+    <Style id="line-000000-1000-nodesc-normal">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-nodesc-highlight">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-5000-nodesc-normal">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>2.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-5000-nodesc-highlight">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-5000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-5000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-5000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-2000-nodesc-normal">
+      <LineStyle>
+        <color>ffffa0a0</color>
+        <width>2</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-2000-nodesc-highlight">
+      <LineStyle>
+        <color>ffffa0a0</color>
+        <width>3</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-2000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-2000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-2000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-1000-green-normal">
+      <LineStyle>
+        <color>ff009900</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-green-highlight">
+      <LineStyle>
+        <color>ff009900</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-green">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-green-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-green-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-1000-red-normal">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-red-highlight">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-red">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-red-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-red-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Folder>
+	  <name>1024x1024</name>
+%s
+    </Folder>
+  </Document>
+</kml>
+</textarea>
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>新竹鐵道計畫 (v1.0c)</name>
+    <description><![CDATA[A列車9 <br>新竹鐵道計畫 v1.0c]]></description>
+    <Style id="line-000000-1000-nodesc-normal">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-nodesc-highlight">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-5000-nodesc-normal">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>2.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-5000-nodesc-highlight">
+      <LineStyle>
+        <color>ff000000</color>
+        <width>5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-5000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-5000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-5000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-2000-nodesc-normal">
+      <LineStyle>
+        <color>ffffa0a0</color>
+        <width>2</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-2000-nodesc-highlight">
+      <LineStyle>
+        <color>ffffa0a0</color>
+        <width>3</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-2000-nodesc">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-2000-nodesc-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-2000-nodesc-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-1000-green-normal">
+      <LineStyle>
+        <color>ff009900</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-green-highlight">
+      <LineStyle>
+        <color>ff009900</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-green">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-green-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-green-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-000000-1000-red-normal">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>1</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <Style id="line-000000-1000-red-highlight">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>1.5</width>
+      </LineStyle>
+      <BalloonStyle>
+        <text><![CDATA[<h3>$[name]</h3>]]></text>
+      </BalloonStyle>
+    </Style>
+    <StyleMap id="line-000000-1000-red">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-000000-1000-red-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-000000-1000-red-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Folder>
+	  <name>1024x1024</name>
+%s
+    </Folder>
+  </Document>
+</kml>
+</textarea>
+<div>
+Output: <br/>
+<textarea name="output"></textarea>
+</div>
+</form>
+</body>
+</html>
